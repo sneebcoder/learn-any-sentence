@@ -363,6 +363,8 @@ function LearnPageInner() {
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
   const initialized = useRef(false);
+  // Always points to the latest sendUserMessage to avoid stale closure in onstop
+  const sendUserMessageRef = useRef<(text: string, fromBlockIndex?: number) => Promise<void>>(async () => {});
 
   const scrollToBottom = useCallback(() => {
     setTimeout(() => {
@@ -468,6 +470,9 @@ function LearnPageInner() {
     await callChat(newMessages);
   }, [apiMessages, callChat, currentStep, scrollToBottom]);
 
+  // Keep ref in sync so onstop always calls the latest sendUserMessage
+  useEffect(() => { sendUserMessageRef.current = sendUserMessage; }, [sendUserMessage]);
+
   const handleMCQAnswer = useCallback(async (blockIndex: number, choice: string) => {
     setBlocks((prev) => prev.map((b, i) => (i === blockIndex && b.type === "mcq" ? { ...b, answered: choice } : b)));
     await sendUserMessage(`I choose ${choice}`);
@@ -479,27 +484,47 @@ function LearnPageInner() {
   }, [sendUserMessage]);
 
   const startRecording = useCallback(async () => {
+    console.log("[Recorder] startRecording called");
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      console.log("[Recorder] mic stream obtained");
       const recorder = new MediaRecorder(stream);
       audioChunksRef.current = [];
-      recorder.ondataavailable = (e) => audioChunksRef.current.push(e.data);
+      recorder.ondataavailable = (e) => {
+        console.log("[Recorder] ondataavailable — chunk size:", e.data.size);
+        audioChunksRef.current.push(e.data);
+      };
       recorder.onstop = async () => {
+        console.log("[Recorder] onstop fired — chunks:", audioChunksRef.current.length);
         stream.getTracks().forEach((t) => t.stop());
         const blob = new Blob(audioChunksRef.current, { type: "audio/webm" });
-        const res = await fetch("/api/stt", { method: "POST", body: blob });
-        const data = await res.json();
-        if (data.transcript) sendUserMessage(data.transcript);
+        console.log("[Recorder] blob assembled — size:", blob.size);
+        try {
+          const res = await fetch("/api/stt", { method: "POST", body: blob });
+          const data = await res.json();
+          console.log("[Recorder] STT response:", data);
+          if (data.transcript) {
+            console.log("[Recorder] transcript received, sending message:", data.transcript);
+            sendUserMessageRef.current(data.transcript);
+          } else {
+            console.warn("[Recorder] empty transcript from STT");
+          }
+        } catch (err) {
+          console.error("[Recorder] STT fetch failed:", err);
+        }
       };
       recorder.start();
+      console.log("[Recorder] MediaRecorder started, state:", recorder.state);
       mediaRecorderRef.current = recorder;
       setIsRecording(true);
-    } catch {
+    } catch (err) {
+      console.error("[Recorder] failed to start:", err);
       alert("Microphone access denied.");
     }
-  }, [sendUserMessage]);
+  }, []);
 
   const stopRecording = useCallback(() => {
+    console.log("[Recorder] stopRecording called, recorder state:", mediaRecorderRef.current?.state);
     mediaRecorderRef.current?.stop();
     setIsRecording(false);
   }, []);
