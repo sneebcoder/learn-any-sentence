@@ -24,3 +24,29 @@ body {
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
 }
+
+@keyframes slide-up {
+  from { transform: translateY(100%); }
+  to   { transform: translateY(0); }
+}
+.animate-slide-up {
+  animation: slide-up 0.28s ease-out;
+}
+
+@keyframes tile-celebrate {
+  0%   { transform: scale(1); }
+  40%  { transform: scale(1.07); }
+  70%  { transform: scale(1.04); }
+  100% { transform: scale(1.05); }
+}
+@keyframes tile-exit {
+  from { opacity: 1; transform: scale(1.05); }
+  to   { opacity: 0; transform: scale(0.75) translateY(-6px); }
+}
+@keyframes tile-enter {
+  from { opacity: 0; transform: scale(0.75) translateY(6px); }
+  to   { opacity: 1; transform: scale(1); }
+}
+.tile-celebrate { animation: tile-celebrate 0.4s ease-out forwards; }
+.tile-exit      { animation: tile-exit 0.45s ease-in forwards; }
+.tile-enter     { animation: tile-enter 0.4s ease-out forwards; }

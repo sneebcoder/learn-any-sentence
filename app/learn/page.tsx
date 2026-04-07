@@ -3,11 +3,12 @@
 import { useEffect, useRef, useState, useCallback } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { Suspense } from "react";
+import { savePhrase } from "../lib/phrasebook";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 type TextBlock = { type: "text"; content: string; step: number; isUser?: boolean; quickReplies?: string[] };
-type PhraseCardBlock = { type: "phrase_card"; english: string; romanization: string; hindi: string; followup: string; step: number };
+type PhraseCardBlock = { type: "phrase_card"; english: string; romanization: string; hindi: string; followup: string; step: number; lang?: string };
 type MCQBlock = { type: "mcq"; question: string; options: string[]; correct: string; step: number; answered?: string };
 type JumbleBlock = { type: "jumble"; instruction: string; words: string[]; correct: string; step: number; submitted?: boolean; userAnswer?: string };
 type SubstitutionBlock = { type: "substitution"; intro: string; swapWord: string; rows: { english: string; romanization: string; hindi: string }[]; outro: string; step: number };
@@ -99,26 +100,32 @@ function blockSpeakableText(block: Block): string | null {
   return null;
 }
 
-// Replay button shown under each assistant message
-function ReplayButton({ isPlaying, onClick }: { isPlaying: boolean; onClick: () => void }) {
+// Circular speaker button embedded inside bubbles
+function InlineSpeaker({ isPlaying, onClick, light = false }: { isPlaying: boolean; onClick: () => void; light?: boolean }) {
   return (
     <button
       onClick={onClick}
-      className={`flex items-center gap-1.5 text-xs transition-colors ml-1 group ${isPlaying ? "text-[#d4622a]" : "text-gray-400 hover:text-[#d4622a]"}`}
+      className={`w-9 h-9 rounded-full flex-shrink-0 flex items-center justify-center transition-all active:scale-95 ${
+        light
+          ? "bg-white/20 hover:bg-white/30"
+          : isPlaying
+          ? "bg-[#d4622a]/15"
+          : "bg-gray-200 hover:bg-gray-300"
+      }`}
     >
-      <span className={`w-6 h-6 rounded-full flex items-center justify-center transition-colors ${isPlaying ? "bg-orange-100" : "bg-gray-100 group-hover:bg-orange-50"}`}>
-        {isPlaying ? (
-          // Animated bars when playing
-          <span className="flex items-end gap-[2px] h-3">
-            {[0, 1, 2].map((i) => (
-              <span key={i} className="w-[3px] bg-[#d4622a] rounded-full animate-bounce" style={{ height: `${[8, 12, 6][i]}px`, animationDelay: `${i * 0.15}s` }} />
-            ))}
-          </span>
-        ) : (
-          <SpeakerIcon size={13} color="currentColor" />
-        )}
-      </span>
-      <span>{isPlaying ? "Playing…" : "Replay"}</span>
+      {isPlaying ? (
+        <span className="flex items-end gap-[2px] h-3">
+          {[0, 1, 2].map((k) => (
+            <span
+              key={k}
+              className={`w-[3px] rounded-full animate-bounce ${light ? "bg-white" : "bg-[#d4622a]"}`}
+              style={{ height: `${[8, 12, 6][k]}px`, animationDelay: `${k * 0.15}s` }}
+            />
+          ))}
+        </span>
+      ) : (
+        <SpeakerIcon size={16} color={light ? "white" : "#6b7280"} />
+      )}
     </button>
   );
 }
@@ -127,10 +134,21 @@ function ReplayButton({ isPlaying, onClick }: { isPlaying: boolean; onClick: () 
 
 function TypingIndicator() {
   return (
-    <div className="flex gap-1 items-center px-4 py-3 bg-white rounded-2xl rounded-bl-sm w-16 shadow-sm">
-      {[0, 1, 2].map((i) => (
-        <span key={i} className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: `${i * 0.15}s` }} />
-      ))}
+    <div className="flex items-end gap-2">
+      {/* Avatar */}
+      <div className="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center flex-shrink-0 overflow-hidden">
+        <span className="text-lg leading-none">🧑</span>
+      </div>
+      {/* Bubble */}
+      <div className="flex gap-1.5 items-center px-4 py-3 bg-white rounded-2xl rounded-bl-sm shadow-sm">
+        {[0, 1, 2].map((i) => (
+          <span
+            key={i}
+            className="w-2.5 h-2.5 bg-gray-300 rounded-full animate-bounce"
+            style={{ animationDelay: `${i * 0.18}s` }}
+          />
+        ))}
+      </div>
     </div>
   );
 }
@@ -154,18 +172,24 @@ function QuickReplies({ replies, onSelect }: { replies: string[]; onSelect: (r: 
 function PhraseCardWidget({ block, isPlaying, onReplay }: { block: PhraseCardBlock; isPlaying: boolean; onReplay: () => void }) {
   return (
     <div className="flex flex-col gap-2 w-full">
-      <div className="self-start bg-white rounded-2xl px-4 py-3 shadow-sm flex items-center gap-2">
+      {/* English chip */}
+      <div className="self-start bg-white rounded-2xl px-4 py-3 shadow-sm flex items-center gap-3">
+        <InlineSpeaker isPlaying={false} onClick={onReplay} />
         <span className="text-gray-800 font-medium">{block.english}</span>
       </div>
-      <div className="self-start bg-[#d4622a] rounded-2xl rounded-bl-sm px-5 py-4 shadow-sm max-w-[85%]">
-        <p className="text-white font-bold text-base leading-snug">{block.romanization}</p>
-        <p className="text-white/90 text-sm mt-1 leading-snug">{block.hindi}</p>
+      {/* Orange Hindi bubble */}
+      <div className="self-start bg-[#d4622a] rounded-2xl rounded-bl-sm px-4 py-4 shadow-sm max-w-[85%] flex items-start gap-3">
+        <InlineSpeaker isPlaying={isPlaying} onClick={onReplay} light />
+        <div>
+          <p className="text-white font-bold text-base leading-snug">{block.romanization}</p>
+          <p className="text-white/90 text-sm mt-1 leading-snug">{block.hindi}</p>
+        </div>
       </div>
-      <div className="self-start bg-white rounded-2xl rounded-bl-sm px-4 py-3 shadow-sm max-w-[85%] flex items-start gap-2">
-        <span className="text-2xl flex-shrink-0">🧑</span>
+      {/* Follow-up */}
+      <div className="self-start bg-white rounded-2xl rounded-bl-sm px-4 py-3 shadow-sm max-w-[85%] flex items-center gap-3">
+        <InlineSpeaker isPlaying={false} onClick={onReplay} />
         <p className="text-gray-700 text-sm leading-snug">{block.followup}</p>
       </div>
-      <ReplayButton isPlaying={isPlaying} onClick={onReplay} />
     </div>
   );
 }
@@ -236,7 +260,7 @@ function JumbleWidget({ block, onSubmit }: { block: JumbleBlock; onSubmit: (answ
   );
 }
 
-function SubstitutionWidget({ block }: { block: SubstitutionBlock }) {
+function SubstitutionWidget({ block, targetLang = "Hindi" }: { block: SubstitutionBlock; targetLang?: string }) {
   return (
     <div className="bg-white rounded-2xl shadow-sm p-4 w-full">
       <p className="text-sm text-gray-700 mb-3 leading-snug">{block.intro}</p>
@@ -246,7 +270,7 @@ function SubstitutionWidget({ block }: { block: SubstitutionBlock }) {
             <tr className="bg-gray-50">
               <th className="text-left px-3 py-2 text-xs text-gray-500 font-medium">English</th>
               <th className="text-left px-3 py-2 text-xs text-gray-500 font-medium">Pronunciation</th>
-              <th className="text-left px-3 py-2 text-xs text-gray-500 font-medium">Hindi</th>
+              <th className="text-left px-3 py-2 text-xs text-gray-500 font-medium">{targetLang}</th>
             </tr>
           </thead>
           <tbody>
@@ -319,6 +343,9 @@ function LearnPageInner() {
   const router = useRouter();
   const sentence = searchParams.get("sentence") ?? "";
   const emoji = searchParams.get("emoji") ?? "📝";
+  const lang = searchParams.get("lang") ?? "hindi";
+  const langLabel = lang === "tamil" ? "Tamil" : "Hindi";
+  const accentColor = lang === "tamil" ? "#7c5cbf" : "#d4622a";
 
   const [blocks, setBlocks] = useState<Block[]>([]);
   const [apiMessages, setApiMessages] = useState<ApiMessage[]>([]);
@@ -330,6 +357,7 @@ function LearnPageInner() {
   const [usedQuickReplies, setUsedQuickReplies] = useState<Set<number>>(new Set());
   const [reportBlock, setReportBlock] = useState<ReportBlock | null>(null);
   const currentAudioRef = useRef<HTMLAudioElement | null>(null);
+  const playBlockAtRef = useRef<(index: number, text: string) => Promise<void>>(async () => {});
 
   const scrollRef = useRef<HTMLDivElement>(null);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
@@ -350,31 +378,68 @@ function LearnPageInner() {
       const res = await fetch("/api/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ messages, sentence }),
+        body: JSON.stringify({ messages, sentence, lang }),
       });
       const data = await res.json();
       const newBlocks: Block[] = data.blocks ?? [];
       const rawResponse = JSON.stringify(newBlocks);
       const updatedMessages: ApiMessage[] = [...messages, { role: "assistant", content: rawResponse }];
       setApiMessages(updatedMessages);
-      setBlocks((prev) => [...prev.filter((b) => b.type !== "typing"), ...newBlocks]);
+
       const maxStep = Math.max(...newBlocks.map((b) => ("step" in b ? b.step : 0)));
       if (maxStep > 0) setCurrentStep(maxStep);
 
-      // Show report modal if lesson is complete
-      const report = newBlocks.find((b): b is ReportBlock => b.type === "report");
-      if (report) setTimeout(() => setReportBlock(report), 1200);
-      scrollToBottom();
+      // Reveal blocks one at a time with typing delays between them
+      let firstSpeakableAbsIdx: number | null = null;
+      let firstSpeakableBlock: Block | null = null;
 
-      // Auto-play first speakable block in new response
-      const firstSpeakable = newBlocks.find((b) => blockSpeakableText(b) !== null);
-      if (firstSpeakable) {
-        // We need the absolute index — derive after blocks state settles
-        setBlocks((prev) => {
-          const absIdx = prev.findIndex((b) => b === firstSpeakable);
-          if (absIdx !== -1) playBlockAt(absIdx, blockSpeakableText(firstSpeakable)!);
-          return prev;
-        });
+      for (let idx = 0; idx < newBlocks.length; idx++) {
+        const block = newBlocks[idx];
+
+        if (idx === 0) {
+          // Replace typing indicator with first block
+          setBlocks((prev) => {
+            const withoutTyping = prev.filter((b) => b.type !== "typing");
+            const absIdx = withoutTyping.length;
+            if (firstSpeakableAbsIdx === null && blockSpeakableText(block)) {
+              firstSpeakableAbsIdx = absIdx;
+              firstSpeakableBlock = block;
+            }
+            return [...withoutTyping, block];
+          });
+        } else {
+          // Gap before typing indicator appears
+          await new Promise((r) => setTimeout(r, 300));
+          setBlocks((prev) => [...prev, { type: "typing" }]);
+          scrollToBottom();
+          // Typing duration scales with content length (1000–1800ms)
+          const contentLength = "content" in block ? (block.content as string).length : 60;
+          const typingMs = Math.min(1800, Math.max(1000, contentLength * 12));
+          await new Promise((r) => setTimeout(r, typingMs));
+          setBlocks((prev) => {
+            const withoutTyping = prev.filter((b) => b.type !== "typing");
+            const absIdx = withoutTyping.length;
+            if (firstSpeakableAbsIdx === null && blockSpeakableText(block)) {
+              firstSpeakableAbsIdx = absIdx;
+              firstSpeakableBlock = block;
+            }
+            return [...withoutTyping, block];
+          });
+        }
+        scrollToBottom();
+      }
+
+      // Auto-play first speakable block
+      if (firstSpeakableAbsIdx !== null && firstSpeakableBlock !== null) {
+        const speakable = blockSpeakableText(firstSpeakableBlock);
+        if (speakable) playBlockAtRef.current(firstSpeakableAbsIdx, speakable);
+      }
+
+      // Show report modal and save to phrasebook if lesson is complete
+      const report = newBlocks.find((b): b is ReportBlock => b.type === "report");
+      if (report) {
+        savePhrase({ english: sentence, hindi: report.hindi, romanization: report.romanization, emoji, learnedAt: new Date().toISOString() });
+        setTimeout(() => setReportBlock(report), 1500);
       }
 
       return updatedMessages;
@@ -440,7 +505,14 @@ function LearnPageInner() {
   }, []);
 
   const playBlockAt = useCallback(async (index: number, text: string) => {
-    // Stop any currently playing audio
+    // If this block is already playing, pause it
+    if (playingIndex === index && currentAudioRef.current) {
+      currentAudioRef.current.pause();
+      currentAudioRef.current = null;
+      setPlayingIndex(null);
+      return;
+    }
+    // Stop any other playing audio
     if (currentAudioRef.current) {
       currentAudioRef.current.pause();
       currentAudioRef.current = null;
@@ -457,16 +529,19 @@ function LearnPageInner() {
     } else {
       setPlayingIndex(null);
     }
-  }, []);
+  }, [playingIndex]);
 
-  const progress = Math.min((currentStep / 6) * 100, 100);
+  // Keep ref in sync so callChat can call it without a dependency cycle
+  playBlockAtRef.current = playBlockAt;
+
+  const progress = Math.min((currentStep / 7) * 100, 100);
 
   return (
     <div className="flex flex-col h-screen bg-[#f0f0f0] max-w-sm mx-auto">
       {/* Top bar */}
       <div className="flex items-center gap-3 px-4 py-3 bg-[#f0f0f0]">
         <button
-          onClick={() => router.push("/")}
+          onClick={() => router.push(`/${lang}`)}
           className="w-10 h-10 bg-gray-500 rounded-full flex items-center justify-center flex-shrink-0 shadow hover:bg-gray-600 transition-colors"
         >
           <PauseIcon size={18} color="white" />
@@ -474,6 +549,15 @@ function LearnPageInner() {
         <div className="flex-1 h-2 bg-gray-300 rounded-full overflow-hidden">
           <div className="h-full bg-[#d4622a] rounded-full transition-all duration-500" style={{ width: `${progress}%` }} />
         </div>
+      </div>
+
+      {/* Sentence banner */}
+      <div className="mx-4 mb-1 bg-white rounded-2xl px-4 py-3 shadow-sm">
+        <p className="text-gray-700 text-sm leading-snug">
+          Let&apos;s start learning how to say{" "}
+          <span className="font-medium" style={{ color: accentColor }}>&ldquo;{sentence}&rdquo;</span>
+          {" "}in {langLabel}.
+        </p>
       </div>
 
       {/* Chat area */}
@@ -495,20 +579,15 @@ function LearnPageInner() {
             const showQuickReplies = block.quickReplies && block.quickReplies.length > 0 && !usedQuickReplies.has(i) && !isLoading;
             return (
               <div key={i} className="flex flex-col">
-                <div className="flex justify-start items-start gap-2">
-                  <span className="text-2xl flex-shrink-0 mt-1">🧑</span>
-                  <div className="flex flex-col gap-1.5">
-                    <div className="bg-white rounded-2xl rounded-bl-sm px-4 py-3 max-w-[85%] shadow-sm">
-                      <p className="text-gray-700 text-sm leading-relaxed">
-                        {block.content.split(/(\*\*.*?\*\*|"[^"]*")/).map((part, j) => {
-                          if (/^\*\*.*\*\*$/.test(part)) return <strong key={j}>{part.slice(2, -2)}</strong>;
-                          if (/^"[^"]*"$/.test(part)) return <span key={j} className="text-[#d4622a] font-medium">{part}</span>;
-                          return part;
-                        })}
-                      </p>
-                    </div>
-                    <ReplayButton isPlaying={playingIndex === i} onClick={() => playBlockAt(i, block.content)} />
-                  </div>
+                <div className="self-start bg-white rounded-2xl rounded-bl-sm shadow-sm max-w-[85%] flex items-center gap-3 px-4 py-3">
+                  <InlineSpeaker isPlaying={playingIndex === i} onClick={() => playBlockAt(i, block.content)} />
+                  <p className="text-gray-700 text-sm leading-relaxed">
+                    {block.content.split(/(\*\*.*?\*\*|"[^"]*")/).map((part, j) => {
+                      if (/^\*\*.*\*\*$/.test(part)) return <strong key={j}>{part.slice(2, -2)}</strong>;
+                      if (/^"[^"]*"$/.test(part)) return <span key={j} className="text-[#d4622a] font-medium">{part}</span>;
+                      return part;
+                    })}
+                  </p>
                 </div>
                 {showQuickReplies && (
                   <QuickReplies replies={block.quickReplies!} onSelect={(r) => sendUserMessage(r, i)} />
@@ -537,7 +616,7 @@ function LearnPageInner() {
 
           if (block.type === "substitution") return (
             <div key={i} className="w-full max-w-[90%]">
-              <SubstitutionWidget block={block} />
+              <SubstitutionWidget block={block} targetLang={langLabel} />
             </div>
           );
 
@@ -554,7 +633,7 @@ function LearnPageInner() {
           block={reportBlock}
           emoji={emoji}
           sentence={sentence}
-          onClose={() => router.push("/")}
+          onClose={() => router.push(`/${lang}?completed=${encodeURIComponent(sentence)}`)}
         />
       )}
 
