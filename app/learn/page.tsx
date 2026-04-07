@@ -6,7 +6,7 @@ import { Suspense } from "react";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
-type TextBlock = { type: "text"; content: string; step: number; isUser?: boolean };
+type TextBlock = { type: "text"; content: string; step: number; isUser?: boolean; quickReplies?: string[] };
 type PhraseCardBlock = { type: "phrase_card"; english: string; romanization: string; hindi: string; followup: string; step: number };
 type MCQBlock = { type: "mcq"; question: string; options: string[]; correct: string; step: number; answered?: string };
 type JumbleBlock = { type: "jumble"; instruction: string; words: string[]; correct: string; step: number; submitted?: boolean; userAnswer?: string };
@@ -14,8 +14,65 @@ type SubstitutionBlock = { type: "substitution"; intro: string; swapWord: string
 type TypingBlock = { type: "typing" };
 
 type Block = TextBlock | PhraseCardBlock | MCQBlock | JumbleBlock | SubstitutionBlock | TypingBlock;
-
 type ApiMessage = { role: "user" | "assistant"; content: string };
+
+// ─── SVG Icons ────────────────────────────────────────────────────────────────
+
+function PauseIcon({ size = 20, color = "white" }: { size?: number; color?: string }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill={color}>
+      <rect x="5" y="4" width="4" height="16" rx="1.5" />
+      <rect x="15" y="4" width="4" height="16" rx="1.5" />
+    </svg>
+  );
+}
+
+function SpeakerIcon({ size = 16, color = "currentColor" }: { size?: number; color?: string }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5" />
+      <path d="M15.54 8.46a5 5 0 0 1 0 7.07" />
+      <path d="M19.07 4.93a10 10 0 0 1 0 14.14" />
+    </svg>
+  );
+}
+
+function MicIcon({ size = 24, color = "white" }: { size?: number; color?: string }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <rect x="9" y="2" width="6" height="11" rx="3" />
+      <path d="M5 10a7 7 0 0 0 14 0" />
+      <line x1="12" y1="19" x2="12" y2="22" />
+      <line x1="8" y1="22" x2="16" y2="22" />
+    </svg>
+  );
+}
+
+function StopIcon({ size = 22, color = "white" }: { size?: number; color?: string }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill={color}>
+      <rect x="4" y="4" width="16" height="16" rx="2" />
+    </svg>
+  );
+}
+
+function SkipIcon({ size = 22, color = "currentColor" }: { size?: number; color?: string }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill={color}>
+      <polygon points="5 4 15 12 5 20 5 4" />
+      <rect x="17" y="4" width="2.5" height="16" rx="1" />
+    </svg>
+  );
+}
+
+function SendIcon({ size = 18, color = "white" }: { size?: number; color?: string }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+      <line x1="22" y1="2" x2="11" y2="13" />
+      <polygon points="22 2 15 22 11 13 2 9 22 2" />
+    </svg>
+  );
+}
 
 // ─── Audio helpers ─────────────────────────────────────────────────────────────
 
@@ -42,7 +99,7 @@ function extractSpeakableText(blocks: Block[]): string {
     .filter((b): b is TextBlock | PhraseCardBlock => b.type === "text" || b.type === "phrase_card")
     .map((b) => {
       if (b.type === "text") return b.content;
-      return `${b.english}. In Hindi: ${b.romanization}. ${b.hindi}. ${b.followup}`;
+      return `${b.english}. In Hindi: ${b.romanization}. ${b.followup}`;
     })
     .join(" ");
 }
@@ -53,11 +110,23 @@ function TypingIndicator() {
   return (
     <div className="flex gap-1 items-center px-4 py-3 bg-white rounded-2xl rounded-bl-sm w-16 shadow-sm">
       {[0, 1, 2].map((i) => (
-        <span
+        <span key={i} className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: `${i * 0.15}s` }} />
+      ))}
+    </div>
+  );
+}
+
+function QuickReplies({ replies, onSelect }: { replies: string[]; onSelect: (r: string) => void }) {
+  return (
+    <div className="flex flex-wrap gap-2 mt-2 ml-9">
+      {replies.map((r, i) => (
+        <button
           key={i}
-          className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"
-          style={{ animationDelay: `${i * 0.15}s` }}
-        />
+          onClick={() => onSelect(r)}
+          className="bg-white border border-[#d4622a] text-[#d4622a] text-xs font-medium px-3 py-1.5 rounded-full hover:bg-orange-50 active:scale-95 transition-all shadow-sm"
+        >
+          {r}
+        </button>
       ))}
     </div>
   );
@@ -66,16 +135,13 @@ function TypingIndicator() {
 function PhraseCardWidget({ block }: { block: PhraseCardBlock }) {
   return (
     <div className="flex flex-col gap-2 w-full">
-      {/* English sentence chip */}
       <div className="self-start bg-white rounded-2xl px-4 py-3 shadow-sm flex items-center gap-2">
         <span className="text-gray-800 font-medium">{block.english}</span>
       </div>
-      {/* Orange Hindi translation bubble */}
       <div className="self-start bg-[#d4622a] rounded-2xl rounded-bl-sm px-5 py-4 shadow-sm max-w-[85%]">
         <p className="text-white font-bold text-base leading-snug">{block.romanization}</p>
         <p className="text-white/90 text-sm mt-1 leading-snug">{block.hindi}</p>
       </div>
-      {/* Follow-up prompt */}
       <div className="self-start bg-white rounded-2xl rounded-bl-sm px-4 py-3 shadow-sm max-w-[85%] flex items-start gap-2">
         <span className="text-2xl flex-shrink-0">🧑</span>
         <p className="text-gray-700 text-sm leading-snug">{block.followup}</p>
@@ -88,29 +154,20 @@ function MCQWidget({ block, onAnswer }: { block: MCQBlock; onAnswer: (choice: st
   const letters = ["A", "B", "C", "D"];
   return (
     <div className="bg-white rounded-2xl shadow-sm p-4 w-full">
-      <p className="font-semibold text-gray-800 mb-3 text-sm leading-snug">
-        {block.question}
-      </p>
+      <p className="font-semibold text-gray-800 mb-3 text-sm leading-snug">{block.question}</p>
       <div className="flex flex-col gap-2">
         {block.options.map((opt, i) => {
           const letter = letters[i];
           const isSelected = block.answered === letter;
           const isCorrect = letter === block.correct;
           const showResult = !!block.answered;
-
           let style = "border-gray-200 bg-gray-50 text-gray-700";
           if (showResult && isSelected && isCorrect) style = "border-green-400 bg-green-50 text-green-700";
           else if (showResult && isSelected && !isCorrect) style = "border-red-400 bg-red-50 text-red-700";
           else if (showResult && isCorrect) style = "border-green-400 bg-green-50 text-green-700";
           else if (!showResult) style = "border-gray-200 bg-gray-50 text-gray-700 hover:border-[#d4622a] hover:bg-orange-50";
-
           return (
-            <button
-              key={i}
-              disabled={!!block.answered}
-              onClick={() => onAnswer(letter)}
-              className={`text-left px-4 py-2 rounded-xl border text-sm font-medium transition-colors ${style}`}
-            >
+            <button key={i} disabled={!!block.answered} onClick={() => onAnswer(letter)} className={`text-left px-4 py-2 rounded-xl border text-sm font-medium transition-colors ${style}`}>
               {opt}
             </button>
           );
@@ -123,66 +180,37 @@ function MCQWidget({ block, onAnswer }: { block: MCQBlock; onAnswer: (choice: st
 function JumbleWidget({ block, onSubmit }: { block: JumbleBlock; onSubmit: (answer: string) => void }) {
   const [available, setAvailable] = useState<string[]>([...block.words]);
   const [arranged, setArranged] = useState<string[]>([]);
-
   const pick = (word: string, idx: number) => {
     if (block.submitted) return;
     setAvailable((a) => a.filter((_, i) => i !== idx));
     setArranged((a) => [...a, word]);
   };
-
   const remove = (word: string, idx: number) => {
     if (block.submitted) return;
     setArranged((a) => a.filter((_, i) => i !== idx));
     setAvailable((a) => [...a, word]);
   };
-
   return (
     <div className="bg-white rounded-2xl shadow-sm p-4 w-full">
       <p className="text-sm text-gray-600 mb-3 leading-snug">{block.instruction}</p>
-
-      {/* Answer area */}
       <div className="min-h-10 flex flex-wrap gap-2 border-2 border-dashed border-gray-200 rounded-xl p-2 mb-3">
-        {arranged.length === 0 && (
-          <span className="text-xs text-gray-400 self-center">Tap words below to arrange them here</span>
-        )}
+        {arranged.length === 0 && <span className="text-xs text-gray-400 self-center">Tap words below to arrange them here</span>}
         {arranged.map((word, i) => (
-          <button
-            key={i}
-            onClick={() => remove(word, i)}
-            className="bg-[#d4622a] text-white text-sm font-medium px-3 py-1 rounded-full"
-          >
-            {word}
-          </button>
+          <button key={i} onClick={() => remove(word, i)} className="bg-[#d4622a] text-white text-sm font-medium px-3 py-1 rounded-full">{word}</button>
         ))}
       </div>
-
-      {/* Word pool */}
       <div className="flex flex-wrap gap-2 mb-4">
         {available.map((word, i) => (
-          <button
-            key={i}
-            onClick={() => pick(word, i)}
-            className="bg-gray-100 text-gray-700 text-sm font-medium px-3 py-1 rounded-full border border-gray-200 hover:bg-orange-50 hover:border-[#d4622a]"
-          >
-            {word}
-          </button>
+          <button key={i} onClick={() => pick(word, i)} className="bg-gray-100 text-gray-700 text-sm font-medium px-3 py-1 rounded-full border border-gray-200 hover:bg-orange-50 hover:border-[#d4622a]">{word}</button>
         ))}
       </div>
-
       {!block.submitted && (
-        <button
-          disabled={arranged.length === 0}
-          onClick={() => onSubmit(arranged.join(" "))}
-          className="w-full bg-[#d4622a] disabled:bg-[#e8a882] text-white font-semibold py-2 rounded-full text-sm"
-        >
+        <button disabled={arranged.length === 0} onClick={() => onSubmit(arranged.join(" "))} className="w-full bg-[#d4622a] disabled:bg-[#e8a882] text-white font-semibold py-2 rounded-full text-sm">
           Submit
         </button>
       )}
-
       {block.submitted && (
-        <p className="text-xs text-gray-500 text-center">
-          Your answer: <span className="font-medium text-gray-700">{block.userAnswer}</span>
-        </p>
+        <p className="text-xs text-gray-500 text-center">Your answer: <span className="font-medium text-gray-700">{block.userAnswer}</span></p>
       )}
     </div>
   );
@@ -223,7 +251,6 @@ function LearnPageInner() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const sentence = searchParams.get("sentence") ?? "";
-  const emoji = searchParams.get("emoji") ?? "📝";
 
   const [blocks, setBlocks] = useState<Block[]>([]);
   const [apiMessages, setApiMessages] = useState<ApiMessage[]>([]);
@@ -232,6 +259,7 @@ function LearnPageInner() {
   const [isRecording, setIsRecording] = useState(false);
   const [inputText, setInputText] = useState("");
   const [currentAudio, setCurrentAudio] = useState<HTMLAudioElement | null>(null);
+  const [usedQuickReplies, setUsedQuickReplies] = useState<Set<number>>(new Set());
 
   const scrollRef = useRef<HTMLDivElement>(null);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
@@ -244,18 +272,10 @@ function LearnPageInner() {
     }, 100);
   }, []);
 
-  const addBlocks = useCallback((newBlocks: Block[]) => {
-    setBlocks((prev) => [...prev, ...newBlocks]);
-    const maxStep = Math.max(...newBlocks.map((b) => ("step" in b ? b.step : 0)));
-    if (maxStep > 0) setCurrentStep(maxStep);
-    scrollToBottom();
-  }, [scrollToBottom]);
-
   const callChat = useCallback(async (messages: ApiMessage[]) => {
     setIsLoading(true);
     setBlocks((prev) => [...prev, { type: "typing" }]);
     scrollToBottom();
-
     try {
       const res = await fetch("/api/chat", {
         method: "POST",
@@ -264,78 +284,54 @@ function LearnPageInner() {
       });
       const data = await res.json();
       const newBlocks: Block[] = data.blocks ?? [];
-
-      // Store raw response for conversation history
       const rawResponse = JSON.stringify(newBlocks);
-      const updatedMessages: ApiMessage[] = [
-        ...messages,
-        { role: "assistant", content: rawResponse },
-      ];
+      const updatedMessages: ApiMessage[] = [...messages, { role: "assistant", content: rawResponse }];
       setApiMessages(updatedMessages);
-
-      // Remove typing indicator, add new blocks
-      setBlocks((prev) => {
-        const withoutTyping = prev.filter((b) => b.type !== "typing");
-        return [...withoutTyping, ...newBlocks];
-      });
-
+      setBlocks((prev) => [...prev.filter((b) => b.type !== "typing"), ...newBlocks]);
       const maxStep = Math.max(...newBlocks.map((b) => ("step" in b ? b.step : 0)));
       if (maxStep > 0) setCurrentStep(maxStep);
       scrollToBottom();
-
-      // Auto-play TTS for text content
       const speakable = extractSpeakableText(newBlocks);
       if (speakable) {
         const audio = await speakText(speakable);
         if (audio) setCurrentAudio(audio);
       }
-
       return updatedMessages;
     } finally {
       setIsLoading(false);
     }
   }, [sentence, scrollToBottom]);
 
-  // Init: start lesson on mount
   useEffect(() => {
     if (initialized.current || !sentence) return;
     initialized.current = true;
     callChat([]);
   }, [sentence, callChat]);
 
-  const sendUserMessage = useCallback(async (text: string) => {
+  const sendUserMessage = useCallback(async (text: string, fromBlockIndex?: number) => {
     if (!text.trim()) return;
-
+    if (fromBlockIndex !== undefined) {
+      setUsedQuickReplies((prev) => new Set(prev).add(fromBlockIndex));
+    }
     const userBlock: TextBlock = { type: "text", content: text, step: currentStep, isUser: true };
     setBlocks((prev) => [...prev, userBlock]);
     setInputText("");
     scrollToBottom();
-
-    const newMessages: ApiMessage[] = [
-      ...apiMessages,
-      { role: "user", content: text },
-    ];
+    const newMessages: ApiMessage[] = [...apiMessages, { role: "user", content: text }];
     setApiMessages(newMessages);
     await callChat(newMessages);
   }, [apiMessages, callChat, currentStep, scrollToBottom]);
 
   const handleMCQAnswer = useCallback(async (blockIndex: number, choice: string) => {
-    setBlocks((prev) =>
-      prev.map((b, i) => (i === blockIndex && b.type === "mcq" ? { ...b, answered: choice } : b))
-    );
+    setBlocks((prev) => prev.map((b, i) => (i === blockIndex && b.type === "mcq" ? { ...b, answered: choice } : b)));
     await sendUserMessage(`I choose ${choice}`);
   }, [sendUserMessage]);
 
   const handleJumbleSubmit = useCallback(async (blockIndex: number, answer: string) => {
-    setBlocks((prev) =>
-      prev.map((b, i) =>
-        i === blockIndex && b.type === "jumble" ? { ...b, submitted: true, userAnswer: answer } : b
-      )
-    );
+    setBlocks((prev) => prev.map((b, i) => (i === blockIndex && b.type === "jumble" ? { ...b, submitted: true, userAnswer: answer } : b)));
     await sendUserMessage(answer);
   }, [sendUserMessage]);
 
-  // Voice recording
   const startRecording = useCallback(async () => {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
@@ -345,9 +341,6 @@ function LearnPageInner() {
       recorder.onstop = async () => {
         stream.getTracks().forEach((t) => t.stop());
         const blob = new Blob(audioChunksRef.current, { type: "audio/webm" });
-        const formData = new FormData();
-        formData.append("audio", blob);
-
         const res = await fetch("/api/stt", { method: "POST", body: blob });
         const data = await res.json();
         if (data.transcript) sendUserMessage(data.transcript);
@@ -365,17 +358,13 @@ function LearnPageInner() {
     setIsRecording(false);
   }, []);
 
-  const toggleRecording = () => {
-    isRecording ? stopRecording() : startRecording();
-  };
-
   const replayAudio = useCallback(async (text: string) => {
     if (currentAudio) { currentAudio.pause(); currentAudio.currentTime = 0; }
     const audio = await speakText(text);
     if (audio) setCurrentAudio(audio);
   }, [currentAudio]);
 
-  const progress = Math.min((currentStep / 7) * 100, 100);
+  const progress = Math.min((currentStep / 6) * 100, 100);
 
   return (
     <div className="flex flex-col h-screen bg-[#f0f0f0] max-w-sm mx-auto">
@@ -383,15 +372,12 @@ function LearnPageInner() {
       <div className="flex items-center gap-3 px-4 py-3 bg-[#f0f0f0]">
         <button
           onClick={() => router.push("/")}
-          className="w-10 h-10 bg-gray-400 rounded-full flex items-center justify-center flex-shrink-0 shadow"
+          className="w-10 h-10 bg-gray-500 rounded-full flex items-center justify-center flex-shrink-0 shadow hover:bg-gray-600 transition-colors"
         >
-          <span className="text-white text-sm font-bold">⏸</span>
+          <PauseIcon size={18} color="white" />
         </button>
         <div className="flex-1 h-2 bg-gray-300 rounded-full overflow-hidden">
-          <div
-            className="h-full bg-[#d4622a] rounded-full transition-all duration-500"
-            style={{ width: `${progress}%` }}
-          />
+          <div className="h-full bg-[#d4622a] rounded-full transition-all duration-500" style={{ width: `${progress}%` }} />
         </div>
       </div>
 
@@ -399,9 +385,7 @@ function LearnPageInner() {
       <div ref={scrollRef} className="flex-1 overflow-y-auto px-4 py-2 flex flex-col gap-4">
         {blocks.map((block, i) => {
           if (block.type === "typing") return (
-            <div key={i} className="flex justify-start">
-              <TypingIndicator />
-            </div>
+            <div key={i} className="flex justify-start"><TypingIndicator /></div>
           );
 
           if (block.type === "text" && block.isUser) return (
@@ -412,69 +396,72 @@ function LearnPageInner() {
             </div>
           );
 
-          if (block.type === "text") return (
-            <div key={i} className="flex justify-start items-start gap-2">
-              <span className="text-2xl flex-shrink-0 mt-1">🧑</span>
-              <div className="flex flex-col gap-1">
-                <div className="bg-white rounded-2xl rounded-bl-sm px-4 py-3 max-w-[80%] shadow-sm">
-                  <p className="text-gray-700 text-sm leading-relaxed">
-                    {block.content.split(/(".*?"|'.*?'|\*\*.*?\*\*)/).map((part, j) => {
-                      if (/^\*\*.*\*\*$/.test(part)) return <strong key={j}>{part.slice(2, -2)}</strong>;
-                      if (/^".*"$/.test(part)) return <span key={j} className="text-[#d4622a] font-medium">{part}</span>;
-                      return part;
-                    })}
-                  </p>
+          if (block.type === "text") {
+            const showQuickReplies = block.quickReplies && block.quickReplies.length > 0 && !usedQuickReplies.has(i) && !isLoading;
+            return (
+              <div key={i} className="flex flex-col">
+                <div className="flex justify-start items-start gap-2">
+                  <span className="text-2xl flex-shrink-0 mt-1">🧑</span>
+                  <div className="flex flex-col gap-1.5">
+                    <div className="bg-white rounded-2xl rounded-bl-sm px-4 py-3 max-w-[85%] shadow-sm">
+                      <p className="text-gray-700 text-sm leading-relaxed">
+                        {block.content.split(/(\*\*.*?\*\*|"[^"]*")/).map((part, j) => {
+                          if (/^\*\*.*\*\*$/.test(part)) return <strong key={j}>{part.slice(2, -2)}</strong>;
+                          if (/^"[^"]*"$/.test(part)) return <span key={j} className="text-[#d4622a] font-medium">{part}</span>;
+                          return part;
+                        })}
+                      </p>
+                    </div>
+                    {/* Replay button */}
+                    <button
+                      onClick={() => replayAudio(block.content)}
+                      className="self-start flex items-center gap-1.5 text-xs text-gray-400 hover:text-[#d4622a] transition-colors ml-1 group"
+                    >
+                      <span className="w-6 h-6 rounded-full bg-gray-100 group-hover:bg-orange-50 flex items-center justify-center transition-colors">
+                        <SpeakerIcon size={13} color="currentColor" />
+                      </span>
+                      <span>Replay</span>
+                    </button>
+                  </div>
                 </div>
-                <button
-                  onClick={() => replayAudio(block.content)}
-                  className="self-start text-xs text-gray-400 hover:text-[#d4622a] flex items-center gap-1 ml-1"
-                >
-                  🔊 Replay
-                </button>
+                {/* Quick replies */}
+                {showQuickReplies && (
+                  <QuickReplies replies={block.quickReplies!} onSelect={(r) => sendUserMessage(r, i)} />
+                )}
               </div>
-            </div>
-          );
+            );
+          }
 
           if (block.type === "phrase_card") return (
-            <div key={i} className="flex flex-col gap-2">
-              <PhraseCardWidget block={block} />
-            </div>
+            <div key={i}><PhraseCardWidget block={block} /></div>
           );
 
           if (block.type === "mcq") return (
-            <div key={i} className="flex justify-start w-full">
-              <div className="w-full max-w-[90%]">
-                <MCQWidget block={block} onAnswer={(choice) => handleMCQAnswer(i, choice)} />
-              </div>
+            <div key={i} className="w-full max-w-[90%]">
+              <MCQWidget block={block} onAnswer={(choice) => handleMCQAnswer(i, choice)} />
             </div>
           );
 
           if (block.type === "jumble") return (
-            <div key={i} className="flex justify-start w-full">
-              <div className="w-full max-w-[90%]">
-                <JumbleWidget block={block} onSubmit={(ans) => handleJumbleSubmit(i, ans)} />
-              </div>
+            <div key={i} className="w-full max-w-[90%]">
+              <JumbleWidget block={block} onSubmit={(ans) => handleJumbleSubmit(i, ans)} />
             </div>
           );
 
           if (block.type === "substitution") return (
-            <div key={i} className="flex justify-start w-full">
-              <div className="w-full max-w-[90%]">
-                <SubstitutionWidget block={block} />
-              </div>
+            <div key={i} className="w-full max-w-[90%]">
+              <SubstitutionWidget block={block} />
             </div>
           );
 
           return null;
         })}
-
-        {/* spacer */}
         <div className="h-4" />
       </div>
 
       {/* Input bar */}
       <div className="bg-[#f0f0f0] px-4 py-4 flex flex-col items-center gap-3">
-        {/* Text input */}
+        {/* Text input row */}
         <div className="flex w-full gap-2 items-center">
           <input
             type="text"
@@ -487,28 +474,31 @@ function LearnPageInner() {
           <button
             onClick={() => sendUserMessage(inputText)}
             disabled={!inputText.trim() || isLoading}
-            className="bg-[#d4622a] disabled:bg-[#e8a882] text-white rounded-full w-9 h-9 flex items-center justify-center text-sm flex-shrink-0"
+            className="bg-[#d4622a] disabled:bg-[#e8a882] text-white rounded-full w-9 h-9 flex items-center justify-center flex-shrink-0 transition-colors"
           >
-            ▶
+            <SendIcon size={16} color="white" />
           </button>
         </div>
 
         {/* Mic + skip row */}
-        <div className="flex items-center justify-center gap-10">
+        <div className="flex items-center justify-center gap-12">
+          {/* Mic / Stop button */}
           <button
-            onClick={toggleRecording}
+            onClick={isRecording ? stopRecording : startRecording}
             className={`w-14 h-14 rounded-full flex items-center justify-center shadow-md transition-all ${
-              isRecording ? "bg-red-500 scale-110" : "bg-gray-400 hover:bg-gray-500"
+              isRecording ? "bg-red-500 scale-110" : "bg-gray-500 hover:bg-gray-600"
             }`}
           >
-            <span className="text-white text-xl">{isRecording ? "⏹" : "🎙"}</span>
+            {isRecording ? <StopIcon size={22} color="white" /> : <MicIcon size={24} color="white" />}
           </button>
+
+          {/* Skip button */}
           <button
             onClick={() => sendUserMessage("skip")}
             disabled={isLoading}
-            className="text-gray-400 hover:text-gray-600 flex items-center gap-1 text-sm"
+            className="w-10 h-10 rounded-full bg-gray-200 hover:bg-gray-300 disabled:opacity-40 flex items-center justify-center transition-colors"
           >
-            <span className="text-lg">⏭</span>
+            <SkipIcon size={20} color="#6b7280" />
           </button>
         </div>
       </div>
