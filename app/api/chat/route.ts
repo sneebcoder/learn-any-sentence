@@ -77,6 +77,8 @@ Note: quickReplies is optional. Each chip must be under 35 characters. The speci
 
 { "type": "substitution", "intro": "string", "swapWord": "string", "rows": [{"english":"","romanization":"","hindi":""}], "outro": "string", "step": 5 }
 
+{ "type": "report", "sentenceType": "short category label e.g. Expressing wants/needs", "romanization": "string", "hindi": "string", "step": 6 }
+
 Step mapping:
 - Step 1: [phrase_card block]
 - Step 2: [text block with feedback, quickReplies: ["Any doubts?"]]
@@ -84,7 +86,7 @@ Step mapping:
 - Step 4: [text block with one-line feedback, jumble block] — text block has quickReplies: ["Want to see more situations?"]
 - Step 5A: [substitution block with quickReplies in a trailing text block: ["Want to try one of these?"]]
 - Step 5B: [text block — fixed expression notice]
-- Step 6: [text block — wrap up, quickReplies: ["Learn something new!"]]
+- Step 6: [text block — one-line wrap up, then report block] — the report block includes sentenceType (a short label classifying the sentence e.g. "Expressing wants/needs", "Asking for directions", "Greeting someone"), romanization, and hindi
 - The "step" field must match the step number above`;
 
 export async function POST(req: NextRequest) {
