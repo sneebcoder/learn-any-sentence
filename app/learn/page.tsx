@@ -13,9 +13,10 @@ type MCQBlock = { type: "mcq"; question: string; options: string[]; correct: str
 type JumbleBlock = { type: "jumble"; instruction: string; words: string[]; correct: string; step: number; submitted?: boolean; userAnswer?: string };
 type SubstitutionBlock = { type: "substitution"; intro: string; swapWord: string; rows: { english: string; romanization: string; hindi: string }[]; outro: string; step: number };
 type ReportBlock = { type: "report"; sentenceType: string; romanization: string; hindi: string; step: number };
+type BreakdownBlock = { type: "breakdown"; words: { word: string; meaning: string }[]; literally: string; step: number };
 type TypingBlock = { type: "typing" };
 
-type Block = TextBlock | PhraseCardBlock | MCQBlock | JumbleBlock | SubstitutionBlock | ReportBlock | TypingBlock;
+type Block = TextBlock | PhraseCardBlock | MCQBlock | JumbleBlock | SubstitutionBlock | ReportBlock | BreakdownBlock | TypingBlock;
 type ApiMessage = { role: "user" | "assistant"; content: string };
 
 // ─── SVG Icons ────────────────────────────────────────────────────────────────
@@ -127,6 +128,25 @@ function InlineSpeaker({ isPlaying, onClick, light = false }: { isPlaying: boole
         <SpeakerIcon size={16} color={light ? "white" : "#6b7280"} />
       )}
     </button>
+  );
+}
+
+function BreakdownWidget({ block, accentColor }: { block: BreakdownBlock; accentColor: string }) {
+  return (
+    <div className="bg-white rounded-2xl rounded-bl-sm shadow-sm overflow-hidden w-full max-w-[90%]">
+      <div className="flex flex-wrap gap-2 p-4">
+        {block.words.map((w, i) => (
+          <div key={i} className="flex flex-col items-center bg-gray-50 rounded-xl px-3 py-2 min-w-[60px]">
+            <span className="text-sm font-semibold text-gray-800">{w.word}</span>
+            <span className="text-xs text-gray-400 mt-0.5 text-center leading-tight">{w.meaning}</span>
+          </div>
+        ))}
+      </div>
+      <div className="border-t border-gray-100 px-4 py-3">
+        <span className="text-xs font-semibold text-gray-400 uppercase tracking-wide">Literally</span>
+        <p className="text-sm font-medium mt-0.5" style={{ color: accentColor }}>&ldquo;{block.literally}&rdquo;</p>
+      </div>
+    </div>
   );
 }
 
@@ -656,6 +676,12 @@ function LearnPageInner() {
           if (block.type === "phrase_card") return (
             <div key={i}>
               <PhraseCardWidget block={block} isPlaying={playingIndex === i} onReplay={() => playBlockAt(i, blockSpeakableText(block)!)} />
+            </div>
+          );
+
+          if (block.type === "breakdown") return (
+            <div key={i} className="flex justify-start">
+              <BreakdownWidget block={block} accentColor={accentColor} />
             </div>
           );
 

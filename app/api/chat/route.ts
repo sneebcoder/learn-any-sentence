@@ -93,11 +93,10 @@ Wait for user input.
 ---
 
 ### Step 2 — Feedback
-- Correct → praise, then briefly explain what the words actually mean so the user understands the phrase, not just memorises it. Break it down word by word in one short message.
-- Wrong → one line correction, show the phrase again, then still give the word breakdown.
+- Correct → praise, then output a breakdown block for the phrase.
+- Wrong → one line correction showing the phrase again, then still output the breakdown block.
 
-Example breakdown (for "Mujhe khana chahiye"):
-> *Mujhe* = to me / I want, *khana* = food, *chahiye* = is needed/wanted. So literally: "To me, food is wanted."
+The breakdown block lists each word with its meaning, plus a "literally" translation of the whole phrase.
 
 Then immediately move to Step 3 — don't wait.
 
@@ -227,6 +226,8 @@ Available block types:
 
 { "type": "phrase_card", "english": "string", "romanization": "string", "hindi": "string", "followup": "Try saying it!", "step": 1 }
 
+{ "type": "breakdown", "words": [{"word": "Mujhe", "meaning": "to me / I want"}, {"word": "khana", "meaning": "food"}], "literally": "To me, food is wanted.", "step": 2 }
+
 { "type": "mcq", "question": "string", "options": ["A) ...", "B) ...", "C) ...", "D) ..."], "correct": "A", "step": 3 }
 
 { "type": "jumble", "instruction": "string", "words": ["word1", "word2", "word3"], "correct": "word1 word2 word3", "step": 5 }
@@ -237,7 +238,7 @@ Available block types:
 
 Step mapping:
 - Step 1: [phrase_card]
-- Step 2: multiple text blocks — praise, then word breakdown as separate bubbles, then move straight to Step 3
+- Step 2: [text (praise or correction)], [breakdown] — then move straight to Step 3
 - Step 3: [text (context setter), mcq] — after MCQ answer: [text (feedback), text (Step 4 context setter), then Step 4 content]
 - Step 4A: [text (context), substitution] — after user confirms: move to Step 5
 - Step 4B: [text (fixed expression notice)]
@@ -330,11 +331,10 @@ Wait for user input.
 ---
 
 ### Step 2 — Feedback
-- Correct → praise, then briefly explain what the words actually mean so the user understands the phrase, not just memorises it. Break it down word by word in one short message.
-- Wrong → one line correction, show the phrase again, then still give the word breakdown.
+- Correct → praise, then output a breakdown block for the phrase.
+- Wrong → one line correction showing the phrase again, then still output the breakdown block.
 
-Example breakdown (for "Enakku saapadu vennum"):
-> *Enakku* = to me / for me, *saapadu* = food, *vennum* = want/need. So literally: "To me, food is needed."
+The breakdown block lists each word with its meaning, plus a "literally" translation of the whole phrase.
 
 Then immediately move to Step 3 — don't wait.
 
@@ -465,6 +465,8 @@ Available block types:
 { "type": "phrase_card", "english": "string", "romanization": "string", "hindi": "string", "followup": "Try saying it!", "step": 1 }
 (Note: for Tamil, the "hindi" field contains Tamil script, e.g. "எனக்கு சாப்பாடு வேணும்")
 
+{ "type": "breakdown", "words": [{"word": "Enakku", "meaning": "to me / for me"}, {"word": "saapadu", "meaning": "food"}], "literally": "To me, food is needed.", "step": 2 }
+
 { "type": "mcq", "question": "string", "options": ["A) ...", "B) ...", "C) ...", "D) ..."], "correct": "A", "step": 3 }
 
 { "type": "jumble", "instruction": "string", "words": ["word1", "word2", "word3"], "correct": "word1 word2 word3", "step": 5 }
@@ -477,7 +479,7 @@ Available block types:
 
 Step mapping:
 - Step 1: [phrase_card]
-- Step 2: multiple text blocks — praise, then word breakdown as separate bubbles, then move straight to Step 3
+- Step 2: [text (praise or correction)], [breakdown] — then move straight to Step 3
 - Step 3: [text (context setter), mcq] — after MCQ answer: [text (feedback), text (Step 4 context setter), then Step 4 content]
 - Step 4A: [text (context), substitution] — after user confirms: move to Step 5
 - Step 4B: [text (fixed expression notice)]
