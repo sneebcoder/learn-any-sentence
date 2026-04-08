@@ -360,6 +360,8 @@ function LearnPageInner() {
   const [reportBlock, setReportBlock] = useState<ReportBlock | null>(null);
   const currentAudioRef = useRef<HTMLAudioElement | null>(null);
   const playBlockAtRef = useRef<(index: number, text: string) => Promise<void>>(async () => {});
+  // Always reflects the latest blocks so callChat can read current count without a stale closure
+  const blocksRef = useRef<Block[]>([]);
 
   const scrollRef = useRef<HTMLDivElement>(null);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
@@ -369,6 +371,9 @@ function LearnPageInner() {
   const sendUserMessageRef = useRef<(text: string, fromBlockIndex?: number) => Promise<void>>(async () => {});
   // Set to true when the user manually pauses audio — stops the auto-play chain
   const userPausedRef = useRef(false);
+
+  // Keep blocksRef in sync on every render
+  blocksRef.current = blocks;
 
   const scrollToBottom = useCallback(() => {
     setTimeout(() => {
@@ -395,9 +400,16 @@ function LearnPageInner() {
       const maxStep = Math.max(...newBlocks.map((b) => ("step" in b ? b.step : 0)));
       if (maxStep > 0) setCurrentStep(maxStep);
 
-      // Reveal blocks one at a time with typing delays between them
+      // Compute speakable queue before reveal — don't rely on setBlocks updater timing
+      // preResponseCount = blocks already shown before this response (excluding typing indicator)
+      const preResponseCount = blocksRef.current.filter((b) => b.type !== "typing").length;
       const speakableQueue: Array<[number, string]> = [];
+      newBlocks.forEach((block, i) => {
+        const speakable = blockSpeakableText(block);
+        if (speakable) speakableQueue.push([preResponseCount + i, speakable]);
+      });
 
+      // Reveal blocks one at a time with typing delays between them
       for (let idx = 0; idx < newBlocks.length; idx++) {
         const block = newBlocks[idx];
 
@@ -405,9 +417,6 @@ function LearnPageInner() {
           // Replace typing indicator with first block
           setBlocks((prev) => {
             const withoutTyping = prev.filter((b) => b.type !== "typing");
-            const absIdx = withoutTyping.length;
-            const speakable = blockSpeakableText(block);
-            if (speakable) speakableQueue.push([absIdx, speakable]);
             return [...withoutTyping, block];
           });
         } else {
@@ -421,9 +430,6 @@ function LearnPageInner() {
           await new Promise((r) => setTimeout(r, typingMs));
           setBlocks((prev) => {
             const withoutTyping = prev.filter((b) => b.type !== "typing");
-            const absIdx = withoutTyping.length;
-            const speakable = blockSpeakableText(block);
-            if (speakable) speakableQueue.push([absIdx, speakable]);
             return [...withoutTyping, block];
           });
         }
