@@ -769,14 +769,7 @@ function LearnPageInner() {
             </button>
           </div>
 
-          {/* Skip button */}
-          <button
-            onClick={() => sendUserMessage("skip")}
-            disabled={isLoading}
-            className="w-10 h-10 rounded-full bg-gray-200 hover:bg-gray-300 disabled:opacity-40 flex items-center justify-center transition-colors"
-          >
-            <SkipIcon size={20} color="#6b7280" />
-          </button>
+
         </div>
       </div>
     </div>
