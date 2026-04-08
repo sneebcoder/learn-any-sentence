@@ -217,9 +217,9 @@ function TamilHomeInner() {
           {/* CTA Button */}
           <button
             onClick={openInputModal}
-            className="w-full bg-[#7c5cbf] hover:bg-[#6b4dab] text-white text-lg font-semibold py-4 rounded-full mb-6 transition-colors"
+            className="w-full bg-[#7c5cbf] hover:bg-[#6b4dab] text-white text-lg font-semibold py-4 rounded-full mb-6 transition-all shadow-lg hover:shadow-xl active:scale-[0.98]"
           >
-            Choose your own sentence
+            Type my own sentence
           </button>
 
           {/* Sentence Grid */}
