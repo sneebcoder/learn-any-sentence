@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 
 const PROMPTS: Record<string, string> = {
-  hindi: "The user is speaking in Hindi. Transcribe using the Latin alphabet (romanised Hindi), not Devanagari or Urdu script. For example: 'Mujhe khana chahiye', 'Aap kaise hain', 'Main theek hoon'.",
+  hindi: "The user is speaking in Hindi. Transcribe in Devanagari script only. Do not use Latin/romanised text or Urdu script. For example: 'मुझे खाना चाहिए', 'आप कैसे हैं', 'मैं ठीक हूँ'.",
   tamil: "The user is speaking in Tamil. Transcribe using the Latin alphabet (romanised Tamil), not Tamil script. For example: 'Enakku saapadu vennum', 'Neenga eppadi irukkeenga', 'Naan nalla irukken'.",
 };
 
