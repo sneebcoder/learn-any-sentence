@@ -222,7 +222,7 @@ function HindiHomeInner() {
             onClick={openInputModal}
             className="w-full bg-[#d4622a] hover:bg-[#bf5524] text-white text-lg font-semibold py-4 rounded-full mb-6 transition-all shadow-lg hover:shadow-xl active:scale-[0.98]"
           >
-            Type my own sentence
+            ✏️ Type my own sentence
           </button>
 
           {/* Sentence Grid */}
