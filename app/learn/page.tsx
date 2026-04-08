@@ -430,6 +430,16 @@ function LearnPageInner() {
         scrollToBottom();
       }
 
+      // Show report modal and save to phrasebook if lesson is complete
+      const report = newBlocks.find((b): b is ReportBlock => b.type === "report");
+      if (report) {
+        savePhrase({ english: sentence, hindi: report.hindi, romanization: report.romanization, emoji, learnedAt: new Date().toISOString() });
+        setTimeout(() => setReportBlock(report), 1500);
+      }
+
+      // Unblock input before audio starts so the user can type while audio plays
+      setIsLoading(false);
+
       // Auto-play all speakable blocks sequentially; stops if user pauses
       userPausedRef.current = false;
       for (const [absIdx, text] of speakableQueue) {
@@ -449,17 +459,11 @@ function LearnPageInner() {
         });
       }
 
-      // Show report modal and save to phrasebook if lesson is complete
-      const report = newBlocks.find((b): b is ReportBlock => b.type === "report");
-      if (report) {
-        savePhrase({ english: sentence, hindi: report.hindi, romanization: report.romanization, emoji, learnedAt: new Date().toISOString() });
-        setTimeout(() => setReportBlock(report), 1500);
-      }
-
       return updatedMessages;
     } finally {
       setIsLoading(false);
     }
+  }, [sentence, scrollToBottom]);
   }, [sentence, scrollToBottom]);
 
   useEffect(() => {
