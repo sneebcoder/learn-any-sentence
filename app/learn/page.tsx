@@ -506,6 +506,13 @@ function LearnPageInner() {
 
   const startRecording = useCallback(async () => {
     console.log("[Recorder] startRecording called");
+    // Stop any playing audio before recording
+    if (currentAudioRef.current) {
+      userPausedRef.current = true;
+      currentAudioRef.current.pause();
+      currentAudioRef.current = null;
+      setPlayingIndex(null);
+    }
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       console.log("[Recorder] mic stream obtained");
