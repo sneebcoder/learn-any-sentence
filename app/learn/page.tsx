@@ -464,7 +464,6 @@ function LearnPageInner() {
       setIsLoading(false);
     }
   }, [sentence, scrollToBottom]);
-  }, [sentence, scrollToBottom]);
 
   useEffect(() => {
     if (initialized.current || !sentence) return;
