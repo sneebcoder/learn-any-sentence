@@ -97,10 +97,20 @@ function CardSkeleton() {
   );
 }
 
+const TAMIL_STORAGE_KEY = "tamil_displayed_sentences";
+
+function loadTamilSentences(): Sentence[] {
+  try {
+    const saved = sessionStorage.getItem(TAMIL_STORAGE_KEY);
+    if (saved) return JSON.parse(saved) as Sentence[];
+  } catch {}
+  return ALL_SENTENCES.slice(0, 8);
+}
+
 function TamilHomeInner() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const [displayedSentences, setDisplayedSentences] = useState<Sentence[]>(ALL_SENTENCES.slice(0, 8));
+  const [displayedSentences, setDisplayedSentences] = useState<Sentence[]>(loadTamilSentences);
   const [isShuffling, setIsShuffling] = useState(false);
   const [showPhrasebook, setShowPhrasebook] = useState(false);
   const [showInputModal, setShowInputModal] = useState(false);
@@ -108,7 +118,12 @@ function TamilHomeInner() {
   const [sentence, setSentence] = useState("");
   const inputRef = useRef<HTMLInputElement>(null);
   // Track every sentence ever shown so shuffles never repeat them
-  const seenTextsRef = useRef<Set<string>>(new Set(ALL_SENTENCES.slice(0, 8).map((s) => s.text)));
+  const seenTextsRef = useRef<Set<string>>(new Set(loadTamilSentences().map((s) => s.text)));
+
+  // Persist displayed sentences so they survive navigation
+  useEffect(() => {
+    try { sessionStorage.setItem(TAMIL_STORAGE_KEY, JSON.stringify(displayedSentences)); } catch {}
+  }, [displayedSentences]);
 
   // Completion animation state
   const [completedIdx, setCompletedIdx] = useState<number | null>(null);

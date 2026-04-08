@@ -97,10 +97,20 @@ function CardSkeleton() {
   );
 }
 
+const HINDI_STORAGE_KEY = "hindi_displayed_sentences";
+
+function loadHindiSentences(): Sentence[] {
+  try {
+    const saved = sessionStorage.getItem(HINDI_STORAGE_KEY);
+    if (saved) return JSON.parse(saved) as Sentence[];
+  } catch {}
+  return ALL_SENTENCES.slice(0, 8);
+}
+
 function HindiHomeInner() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const [displayedSentences, setDisplayedSentences] = useState<Sentence[]>(ALL_SENTENCES.slice(0, 8));
+  const [displayedSentences, setDisplayedSentences] = useState<Sentence[]>(loadHindiSentences);
   const [isShuffling, setIsShuffling] = useState(false);
   const [showPhrasebook, setShowPhrasebook] = useState(false);
   const [showInputModal, setShowInputModal] = useState(false);
@@ -108,7 +118,12 @@ function HindiHomeInner() {
   const [sentence, setSentence] = useState("");
   const inputRef = useRef<HTMLInputElement>(null);
   // Track every sentence ever shown so shuffles never repeat them
-  const seenTextsRef = useRef<Set<string>>(new Set(ALL_SENTENCES.slice(0, 8).map((s) => s.text)));
+  const seenTextsRef = useRef<Set<string>>(new Set(loadHindiSentences().map((s) => s.text)));
+
+  // Persist displayed sentences so they survive navigation
+  useEffect(() => {
+    try { sessionStorage.setItem(HINDI_STORAGE_KEY, JSON.stringify(displayedSentences)); } catch {}
+  }, [displayedSentences]);
 
   // Completion animation state
   const [completedIdx, setCompletedIdx] = useState<number | null>(null);
