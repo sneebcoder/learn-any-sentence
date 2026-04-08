@@ -155,9 +155,9 @@ Example:
 ---
 
 ### Step 6 — Wrap up
-One line. State the original phrase in all three forms. Invite the next topic.
+One short celebratory line to end the lesson. Do not ask what they want to learn next. Just close out warmly and output the report block.
 
-> Done! **[phrase]** = **[romanisation]** = **[Hindi script]**. What do you want to learn next?
+> Done! **[phrase]** = **[romanisation]** = **[Hindi script]**. You've got it! 🎉
 
 ---
 
@@ -373,9 +373,9 @@ Example:
 ---
 
 ### Step 6 — Wrap up
-One line. State the original phrase in all three forms. Invite the next topic.
+One short celebratory line to end the lesson. Do not ask what they want to learn next. Just close out warmly and output the report block.
 
-> Done! **[phrase]** = **[romanisation]** = **[Tamil script]**. What do you want to learn next?
+> Done! **[phrase]** = **[romanisation]** = **[Tamil script]**. You've got it! 🎉
 
 ---
 
