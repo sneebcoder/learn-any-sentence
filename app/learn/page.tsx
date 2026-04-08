@@ -549,7 +549,7 @@ function LearnPageInner() {
         console.log("[Recorder] blob assembled — size:", blob.size);
         setIsProcessingAudio(true);
         try {
-          const res = await fetch("/api/stt", { method: "POST", body: blob });
+          const res = await fetch(`/api/stt?lang=${lang}`, { method: "POST", body: blob });
           const data = await res.json();
           console.log("[Recorder] STT response:", data);
           if (data.transcript) {
