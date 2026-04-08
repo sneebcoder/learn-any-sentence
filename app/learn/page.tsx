@@ -413,12 +413,12 @@ function LearnPageInner() {
           });
         } else {
           // Gap before typing indicator appears
-          await new Promise((r) => setTimeout(r, 300));
+          await new Promise((r) => setTimeout(r, 400));
           setBlocks((prev) => [...prev, { type: "typing" }]);
           scrollToBottom();
-          // Typing duration scales with content length (1000–1800ms)
-          const contentLength = "content" in block ? (block.content as string).length : 60;
-          const typingMs = Math.min(1800, Math.max(1000, contentLength * 12));
+          // Typing duration scales with content length (2000–3000ms)
+          const contentLength = "content" in block ? (block.content as string).length : 80;
+          const typingMs = Math.min(3000, Math.max(2000, contentLength * 15));
           await new Promise((r) => setTimeout(r, typingMs));
           setBlocks((prev) => {
             const withoutTyping = prev.filter((b) => b.type !== "typing");
