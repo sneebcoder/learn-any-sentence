@@ -352,6 +352,8 @@ function LearnPageInner() {
   const [currentStep, setCurrentStep] = useState(0);
   const [isLoading, setIsLoading] = useState(false);
   const [isRecording, setIsRecording] = useState(false);
+  const [isProcessingAudio, setIsProcessingAudio] = useState(false);
+  const [pendingTranscript, setPendingTranscript] = useState<string | null>(null);
   const [inputText, setInputText] = useState("");
   const [playingIndex, setPlayingIndex] = useState<number | null>(null);
   const [usedQuickReplies, setUsedQuickReplies] = useState<Set<number>>(new Set());
@@ -499,18 +501,21 @@ function LearnPageInner() {
         stream.getTracks().forEach((t) => t.stop());
         const blob = new Blob(audioChunksRef.current, { type: "audio/webm" });
         console.log("[Recorder] blob assembled — size:", blob.size);
+        setIsProcessingAudio(true);
         try {
           const res = await fetch("/api/stt", { method: "POST", body: blob });
           const data = await res.json();
           console.log("[Recorder] STT response:", data);
           if (data.transcript) {
-            console.log("[Recorder] transcript received, sending message:", data.transcript);
-            sendUserMessageRef.current(data.transcript);
+            console.log("[Recorder] transcript received, showing preview:", data.transcript);
+            setPendingTranscript(data.transcript);
           } else {
             console.warn("[Recorder] empty transcript from STT");
           }
         } catch (err) {
           console.error("[Recorder] STT fetch failed:", err);
+        } finally {
+          setIsProcessingAudio(false);
         }
       };
       recorder.start();
@@ -685,15 +690,64 @@ function LearnPageInner() {
 
         {/* Mic + skip row */}
         <div className="flex items-center justify-center gap-12">
-          {/* Mic / Stop button */}
-          <button
-            onClick={isRecording ? stopRecording : startRecording}
-            className={`w-14 h-14 rounded-full flex items-center justify-center shadow-md transition-all ${
-              isRecording ? "bg-red-500 scale-110" : "bg-gray-500 hover:bg-gray-600"
-            }`}
-          >
-            {isRecording ? <StopIcon size={22} color="white" /> : <MicIcon size={24} color="white" />}
-          </button>
+          {/* Mic / Stop button with transcript tooltip */}
+          <div className="relative flex flex-col items-center">
+            {/* Transcript preview tooltip */}
+            {pendingTranscript && (
+              <div className="absolute bottom-[calc(100%+10px)] left-1/2 -translate-x-1/2 w-64 bg-gray-800 text-white text-sm rounded-2xl px-4 py-3 shadow-lg flex flex-col gap-2">
+                <p className="text-center leading-snug">&ldquo;{pendingTranscript}&rdquo;</p>
+                <div className="flex items-center justify-center gap-3">
+                  {/* Discard */}
+                  <button
+                    onClick={() => {
+                      console.log("[Recorder] transcript discarded");
+                      setPendingTranscript(null);
+                    }}
+                    className="w-9 h-9 rounded-full bg-red-500 hover:bg-red-600 flex items-center justify-center transition-colors flex-shrink-0"
+                    title="Discard and re-record"
+                  >
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                      <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
+                    </svg>
+                  </button>
+                  {/* Confirm */}
+                  <button
+                    onClick={() => {
+                      console.log("[Recorder] transcript confirmed, sending:", pendingTranscript);
+                      sendUserMessageRef.current(pendingTranscript);
+                      setPendingTranscript(null);
+                    }}
+                    className="w-9 h-9 rounded-full bg-green-500 hover:bg-green-600 flex items-center justify-center transition-colors flex-shrink-0"
+                    title="Send"
+                  >
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                      <polyline points="20 6 9 17 4 12" />
+                    </svg>
+                  </button>
+                </div>
+                {/* Tooltip arrow */}
+                <div className="absolute top-full left-1/2 -translate-x-1/2 w-0 h-0 border-l-8 border-r-8 border-t-8 border-l-transparent border-r-transparent border-t-gray-800" />
+              </div>
+            )}
+
+            <button
+              onClick={isRecording ? stopRecording : (pendingTranscript ? undefined : startRecording)}
+              disabled={isProcessingAudio || !!pendingTranscript}
+              className={`w-14 h-14 rounded-full flex items-center justify-center shadow-md transition-all ${
+                isRecording ? "bg-red-500 scale-110"
+                : isProcessingAudio ? "bg-gray-400"
+                : pendingTranscript ? "bg-gray-400"
+                : "bg-gray-500 hover:bg-gray-600"
+              }`}
+            >
+              {isProcessingAudio
+                ? <svg className="animate-spin" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round"><path d="M21 12a9 9 0 1 1-6.219-8.56" /></svg>
+                : isRecording
+                  ? <StopIcon size={22} color="white" />
+                  : <MicIcon size={24} color="white" />
+              }
+            </button>
+          </div>
 
           {/* Skip button */}
           <button
