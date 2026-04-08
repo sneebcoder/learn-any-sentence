@@ -367,6 +367,8 @@ function LearnPageInner() {
   const initialized = useRef(false);
   // Always points to the latest sendUserMessage to avoid stale closure in onstop
   const sendUserMessageRef = useRef<(text: string, fromBlockIndex?: number) => Promise<void>>(async () => {});
+  // Set to true when the user manually pauses audio — stops the auto-play chain
+  const userPausedRef = useRef(false);
 
   const scrollToBottom = useCallback(() => {
     setTimeout(() => {
@@ -394,8 +396,7 @@ function LearnPageInner() {
       if (maxStep > 0) setCurrentStep(maxStep);
 
       // Reveal blocks one at a time with typing delays between them
-      let firstSpeakableAbsIdx: number | null = null;
-      let firstSpeakableBlock: Block | null = null;
+      const speakableQueue: Array<[number, string]> = [];
 
       for (let idx = 0; idx < newBlocks.length; idx++) {
         const block = newBlocks[idx];
@@ -405,10 +406,8 @@ function LearnPageInner() {
           setBlocks((prev) => {
             const withoutTyping = prev.filter((b) => b.type !== "typing");
             const absIdx = withoutTyping.length;
-            if (firstSpeakableAbsIdx === null && blockSpeakableText(block)) {
-              firstSpeakableAbsIdx = absIdx;
-              firstSpeakableBlock = block;
-            }
+            const speakable = blockSpeakableText(block);
+            if (speakable) speakableQueue.push([absIdx, speakable]);
             return [...withoutTyping, block];
           });
         } else {
@@ -423,20 +422,31 @@ function LearnPageInner() {
           setBlocks((prev) => {
             const withoutTyping = prev.filter((b) => b.type !== "typing");
             const absIdx = withoutTyping.length;
-            if (firstSpeakableAbsIdx === null && blockSpeakableText(block)) {
-              firstSpeakableAbsIdx = absIdx;
-              firstSpeakableBlock = block;
-            }
+            const speakable = blockSpeakableText(block);
+            if (speakable) speakableQueue.push([absIdx, speakable]);
             return [...withoutTyping, block];
           });
         }
         scrollToBottom();
       }
 
-      // Auto-play first speakable block
-      if (firstSpeakableAbsIdx !== null && firstSpeakableBlock !== null) {
-        const speakable = blockSpeakableText(firstSpeakableBlock);
-        if (speakable) playBlockAtRef.current(firstSpeakableAbsIdx, speakable);
+      // Auto-play all speakable blocks sequentially; stops if user pauses
+      userPausedRef.current = false;
+      for (const [absIdx, text] of speakableQueue) {
+        if (userPausedRef.current) break;
+        await new Promise<void>((resolve) => {
+          fetchAudio(text).then((audio) => {
+            if (!audio || userPausedRef.current) { resolve(); return; }
+            setPlayingIndex(absIdx);
+            currentAudioRef.current = audio;
+            audio.onended = () => {
+              currentAudioRef.current = null;
+              setPlayingIndex(null);
+              resolve();
+            };
+            audio.play();
+          });
+        });
       }
 
       // Show report modal and save to phrasebook if lesson is complete
@@ -535,14 +545,15 @@ function LearnPageInner() {
   }, []);
 
   const playBlockAt = useCallback(async (index: number, text: string) => {
-    // If this block is already playing, pause it
+    // If this block is already playing, user is pausing — stop the auto-play chain
     if (playingIndex === index && currentAudioRef.current) {
+      userPausedRef.current = true;
       currentAudioRef.current.pause();
       currentAudioRef.current = null;
       setPlayingIndex(null);
       return;
     }
-    // Stop any other playing audio
+    // Stop any other playing audio (but don't count this as a user pause)
     if (currentAudioRef.current) {
       currentAudioRef.current.pause();
       currentAudioRef.current = null;
