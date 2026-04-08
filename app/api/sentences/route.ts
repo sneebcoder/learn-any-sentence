@@ -4,8 +4,17 @@ import { NextRequest, NextResponse } from "next/server";
 const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
 export async function GET(req: NextRequest) {
-  const lang = new URL(req.url).searchParams.get("lang") ?? "hindi";
+  const url = new URL(req.url);
+  const lang = url.searchParams.get("lang") ?? "hindi";
   const langLabel = lang === "tamil" ? "Tamil" : "Hindi";
+  const excludeParam = url.searchParams.get("exclude") ?? "";
+  const excludedPhrases = excludeParam
+    ? excludeParam.split("|||").filter(Boolean)
+    : [];
+
+  const exclusionLine = excludedPhrases.length > 0
+    ? `\nDo NOT include any of these phrases (already shown to the user):\n${excludedPhrases.map((p) => `- "${p}"`).join("\n")}\n`
+    : "";
 
   const response = await client.messages.create({
     model: "claude-haiku-4-5-20251001",
@@ -16,7 +25,7 @@ export async function GET(req: NextRequest) {
         content: `Generate exactly 8 unique, useful everyday English phrases for a beginner learning ${langLabel}.
 Make them varied — mix of needs, questions, emotions, directions, greetings, and social phrases.
 Keep each phrase short (2–6 words). Pick a relevant emoji for each.
-
+${exclusionLine}
 IMPORTANT: The "text" field must ALWAYS be in English only. Never use ${langLabel}, any non-Latin script, or romanised ${langLabel} in the text field.
 
 Return ONLY a raw JSON array, no markdown, no explanation:

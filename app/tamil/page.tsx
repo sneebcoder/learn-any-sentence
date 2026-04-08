@@ -107,6 +107,8 @@ function TamilHomeInner() {
   const [showLearnModal, setShowLearnModal] = useState<Sentence | null>(null);
   const [sentence, setSentence] = useState("");
   const inputRef = useRef<HTMLInputElement>(null);
+  // Track every sentence ever shown so shuffles never repeat them
+  const seenTextsRef = useRef<Set<string>>(new Set(ALL_SENTENCES.slice(0, 8).map((s) => s.text)));
 
   // Completion animation state
   const [completedIdx, setCompletedIdx] = useState<number | null>(null);
@@ -148,9 +150,11 @@ function TamilHomeInner() {
   const handleShuffle = async () => {
     setIsShuffling(true);
     try {
-      const res = await fetch("/api/sentences?lang=tamil");
+      const exclude = Array.from(seenTextsRef.current).join("|||");
+      const res = await fetch(`/api/sentences?lang=tamil&exclude=${encodeURIComponent(exclude)}`);
       const data = await res.json();
       if (data.sentences?.length) {
+        data.sentences.forEach((s: Sentence) => seenTextsRef.current.add(s.text));
         setDisplayedSentences(data.sentences);
       } else {
         setDisplayedSentences(shuffle(ALL_SENTENCES).slice(0, 8));
