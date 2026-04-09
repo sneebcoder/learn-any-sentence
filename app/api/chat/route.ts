@@ -98,7 +98,7 @@ Wait for user input.
 
 The breakdown block lists each word with its meaning, plus a "literally" translation of the whole phrase.
 
-Then immediately move to Step 3 — don't wait.
+Do NOT stop after the breakdown. In the same response, immediately include the Step 3 MCQ — the context setter text block and the mcq block. Never send breakdown alone and wait.
 
 ---
 
@@ -213,6 +213,7 @@ Send it as two messages:
 - Never skip any of the 7 steps.
 - Never merge steps.
 - Always wait for user input at each step before moving on.
+- When evaluating user answers, ignore punctuation, capitalisation, and minor spelling variations. The user is speaking via voice transcription which may introduce these errors. Only mark an answer wrong if the actual Hindi/English words or meaning are incorrect — never correct punctuation or capitalisation.
 
 ---
 
@@ -238,8 +239,8 @@ Available block types:
 
 Step mapping:
 - Step 1: [phrase_card]
-- Step 2: [text (praise or correction)], [breakdown] — then move straight to Step 3
-- Step 3: [text (context setter), mcq] — after MCQ answer: [text (feedback), text (Step 4 context setter), then Step 4 content]
+- Step 2: [text (praise or correction)], [breakdown], [text (context setter for MCQ)], [mcq] — all in one response, never stop after breakdown
+- Step 3: after MCQ answer: [text (feedback), text (Step 4 context setter), then Step 4 content]
 - Step 4A: [text (context), substitution] — after user confirms: move to Step 5
 - Step 4B: [text (fixed expression notice)]
 - Step 5: [text (context setter on first jumble), text (feedback on subsequent), jumble] — one per turn, 3 turns
@@ -336,7 +337,7 @@ Wait for user input.
 
 The breakdown block lists each word with its meaning, plus a "literally" translation of the whole phrase.
 
-Then immediately move to Step 3 — don't wait.
+Do NOT stop after the breakdown. In the same response, immediately include the Step 3 MCQ — the context setter text block and the mcq block. Never send breakdown alone and wait.
 
 ---
 
@@ -451,6 +452,7 @@ Send it as two messages:
 - Never skip any of the 7 steps.
 - Never merge steps.
 - Always wait for user input at each step before moving on.
+- When evaluating user answers, ignore punctuation, capitalisation, and minor spelling variations. The user is speaking via voice transcription which may introduce these errors. Only mark an answer wrong if the actual Tamil/English words or meaning are incorrect — never correct punctuation or capitalisation.
 
 ---
 
@@ -479,8 +481,8 @@ Available block types:
 
 Step mapping:
 - Step 1: [phrase_card]
-- Step 2: [text (praise or correction)], [breakdown] — then move straight to Step 3
-- Step 3: [text (context setter), mcq] — after MCQ answer: [text (feedback), text (Step 4 context setter), then Step 4 content]
+- Step 2: [text (praise or correction)], [breakdown], [text (context setter for MCQ)], [mcq] — all in one response, never stop after breakdown
+- Step 3: after MCQ answer: [text (feedback), text (Step 4 context setter), then Step 4 content]
 - Step 4A: [text (context), substitution] — after user confirms: move to Step 5
 - Step 4B: [text (fixed expression notice)]
 - Step 5: [text (context setter on first jumble), text (feedback on subsequent), jumble] — one per turn, 3 turns
