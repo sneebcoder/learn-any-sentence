@@ -5,11 +5,6 @@ const PROMPTS: Record<string, string> = {
   tamil: "Enakku food vennum. Naan office poren. I want water. Use romanised Latin script for Tamil words and Latin script for English words.",
 };
 
-const LANGUAGES: Record<string, string> = {
-  hindi: "hi",
-  tamil: "ta",
-};
-
 export async function POST(req: NextRequest) {
   const lang = new URL(req.url).searchParams.get("lang") ?? "hindi";
   const audioBlob = await req.blob();
@@ -17,7 +12,6 @@ export async function POST(req: NextRequest) {
   const formData = new FormData();
   formData.append("file", audioBlob, "audio.webm");
   formData.append("model", "whisper-1");
-  formData.append("language", LANGUAGES[lang] ?? "hi");
   formData.append("prompt", PROMPTS[lang] ?? PROMPTS.hindi);
 
   const response = await fetch("https://api.openai.com/v1/audio/transcriptions", {
