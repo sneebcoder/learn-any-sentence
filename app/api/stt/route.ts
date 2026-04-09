@@ -1,8 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
 
 const PROMPTS: Record<string, string> = {
-  hindi: "The user is speaking in Hindi or English. Transcribe Hindi in Devanagari script and English words in Latin script as spoken. Do not use Urdu script. For example: 'मुझे food चाहिए', 'मैं office जा रहा हूँ', 'I want water'.",
-  tamil: "The user is speaking in Tamil or English. Transcribe Tamil using the Latin alphabet (romanised Tamil) and English words in Latin script as spoken. For example: 'Enakku food vennum', 'Naan office poren', 'I want water'.",
+  hindi: "मुझे food चाहिए. मैं office जा रहा हूँ. I want water. Use Devanagari script for Hindi words and Latin script for English words.",
+  tamil: "Enakku food vennum. Naan office poren. I want water. Use romanised Latin script for Tamil words and Latin script for English words.",
+};
+
+const LANGUAGES: Record<string, string> = {
+  hindi: "hi",
+  tamil: "ta",
 };
 
 export async function POST(req: NextRequest) {
@@ -12,6 +17,7 @@ export async function POST(req: NextRequest) {
   const formData = new FormData();
   formData.append("file", audioBlob, "audio.webm");
   formData.append("model", "whisper-1");
+  formData.append("language", LANGUAGES[lang] ?? "hi");
   formData.append("prompt", PROMPTS[lang] ?? PROMPTS.hindi);
 
   const response = await fetch("https://api.openai.com/v1/audio/transcriptions", {
